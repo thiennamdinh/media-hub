@@ -1,0 +1,21 @@
+# Public unauthenticated reads are attempted by default.
+# For authenticated reads later, pass credentials via environment variables/secrets:
+#   BLUESKY_IDENTIFIER
+#   BLUESKY_APP_PASSWORD
+
+actors:
+  - handle: jay.bsky.team
+    tags: [example, bluesky, tech]
+    limit: 10
+
+feeds:
+  # - name: Example Feed
+  #   uri: at://did:plc:example/app.bsky.feed.generator/example
+  #   tags: [example]
+  #   limit: 25
+
+searches:
+  # Public search may require auth depending on the AppView.
+  # - query: cybersecurity
+  #   tags: [security]
+  #   limit: 25

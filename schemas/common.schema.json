@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/media-hub/common.schema.json",
+  "title": "media-hub common worker record",
+  "type": "object",
+  "required": ["schema_version", "source", "source_type", "record_type", "observed_at"],
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "source": { "type": "string", "minLength": 1 },
+    "source_type": { "type": "string", "enum": ["rss", "bluesky", "polymarket"] },
+    "record_type": { "type": "string", "minLength": 1 },
+    "observed_at": { "type": "string", "format": "date-time" },
+    "title": { "type": ["string", "null"] },
+    "url": { "type": ["string", "null"] },
+    "canonical_url": { "type": ["string", "null"] },
+    "published_at": { "type": ["string", "null"], "format": "date-time" },
+    "external_id": { "type": ["string", "null"] }
+  },
+  "additionalProperties": true
+}

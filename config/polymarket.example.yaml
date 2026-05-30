@@ -1,0 +1,27 @@
+# Polymarket does not expose a simple "market cap" field in the public Gamma market records.
+# Useful size proxies include volumeNum, volume24hr, liquidityNum, and openInterest when present.
+
+top_markets:
+  - name: Top active markets by total volume
+    metric: volumeNum
+    limit: 10
+    active: true
+    closed: false
+    tags: [example, top, volume]
+
+markets:
+  # Use explicit markets for reliable tracking.
+  # - slug: example-market-slug
+  #   tags: [example]
+  # - id: "12345"
+  #   tags: [example]
+
+searches:
+  # Gamma API search behavior can be broad; start with explicit markets for reliable configs.
+  # - query: artificial intelligence
+  #   tags: [ai]
+  #   limit: 25
+
+categories:
+  # - politics
+  # - technology

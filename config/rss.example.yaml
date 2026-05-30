@@ -1,0 +1,12 @@
+feeds:
+  - name: Hacker News
+    source: hacker-news
+    url: https://news.ycombinator.com/rss
+    tags: [tech]
+    fetch_articles: false
+
+  - name: Slashdot
+    source: slashdot
+    url: https://rss.slashdot.org/Slashdot/slashdotMain
+    tags: [tech]
+    fetch_articles: false

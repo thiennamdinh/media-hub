@@ -315,6 +315,7 @@ Use JSONL on stdout as the worker boundary so implementation choices can differ.
   - Hacker News official RSS
   - Slashdot
   - maybe 2–3 blogs/news feeds
+- Implement RSS worker as Python + `feedparser` + `httpx` + `PyYAML`.
 - Fetch feed items as JSONL on stdout.
 - Stream feed items into SQLite.
 - Add basic shell commands/scripts:
@@ -331,6 +332,7 @@ Use JSONL on stdout as the worker boundary so implementation choices can differ.
 
 ### Phase 3: Bluesky worker
 
+- Implement Bluesky worker as TypeScript/Node + `@atproto/api`.
 - Fetch from selected public feeds/lists/actors/searches.
 - Extract links from posts.
 - Store posts and URL mentions.
@@ -338,6 +340,7 @@ Use JSONL on stdout as the worker boundary so implementation choices can differ.
 
 ### Phase 4: Polymarket worker
 
+- Implement Polymarket worker as Python + `httpx` + `PyYAML`, using public APIs first.
 - Fetch configured markets/topics.
 - Store market snapshots as probability signals.
 - Track probability movement over time.
@@ -372,10 +375,13 @@ Use JSONL on stdout as the worker boundary so implementation choices can differ.
 - No dedicated hub service. The system is a control script plus worker containers plus SQLite.
 - Ingest/query implementation is undecided; start with shell + `jq` + `sqlite3` if sufficient, and only add Python if complexity warrants it.
 - Workers: containerized short-lived fetchers.
+- RSS worker: Python + `feedparser` + `httpx` + `PyYAML`.
+- Bluesky worker: TypeScript/Node + `@atproto/api`.
+- Polymarket worker: Python + `httpx` + `PyYAML`.
 - Worker contract: JSONL to stdout, logs/errors to stderr.
 - Persistence: stream worker output into SQLite; SQLite is canonical durable storage.
 - Optional debug mode: tee worker JSONL into `data/runs/<run-id>/` for replay/inspection.
 
 ## Near-term decision to make
 
-Next decision: decide the first worker to implement, likely RSS.
+Next decision: run/build/test the scaffold and then iterate on the RSS worker first.
