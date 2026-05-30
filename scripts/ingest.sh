@@ -11,7 +11,9 @@ EOF
 }
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-DB_PATH="${MEDIA_HUB_DB:-$ROOT_DIR/data/media-hub.sqlite}"
+DATA_DIR="${MEDIA_HUB_DATA_DIR:-$HOME/.local/share/media-hub}"
+DB_PATH="${MEDIA_HUB_DB:-$DATA_DIR/media-hub.sqlite}"
+SCHEMA_PATH="${MEDIA_HUB_SCHEMA:-$ROOT_DIR/db/schema.sql}"
 SOURCE_FALLBACK=""
 INPUT="-"
 
@@ -41,7 +43,7 @@ fi
 
 mkdir -p "$(dirname "$DB_PATH")"
 if [[ ! -f "$DB_PATH" ]]; then
-  sqlite3 "$DB_PATH" < "$ROOT_DIR/db/schema.sql"
+  sqlite3 "$DB_PATH" < "$SCHEMA_PATH"
 fi
 
 TMP_SQL="$(mktemp)"

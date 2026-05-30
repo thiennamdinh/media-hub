@@ -2,7 +2,8 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-DB_PATH="${MEDIA_HUB_DB:-$ROOT_DIR/data/media-hub.sqlite}"
+DATA_DIR="${MEDIA_HUB_DATA_DIR:-$HOME/.local/share/media-hub}"
+DB_PATH="${MEDIA_HUB_DB:-$DATA_DIR/media-hub.sqlite}"
 LIMIT=25
 
 while [[ $# -gt 0 ]]; do

@@ -372,9 +372,11 @@ Use JSONL on stdout as the worker boundary so implementation choices can differ.
 ## Decisions so far
 
 - Control plane v0: plain shell script orchestration.
+- Local install copies runtime scripts to `~/.local/lib/media-hub` and wrapper commands to `~/.local/bin`.
 - No dedicated hub service. The system is a control script plus worker containers plus SQLite.
 - Ingest/query implementation is undecided; start with shell + `jq` + `sqlite3` if sufficient, and only add Python if complexity warrants it.
 - Workers: containerized short-lived fetchers.
+- GitHub Actions publishes worker images to GHCR on pushes to `main`; local install can also build images directly.
 - RSS worker: Python + `feedparser` + `httpx` + `PyYAML`.
 - Bluesky worker: TypeScript/Node + `@atproto/api`.
 - Polymarket worker: Python + `httpx` + `PyYAML`.
