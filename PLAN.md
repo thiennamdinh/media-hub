@@ -1,14 +1,14 @@
 # Media Hub Plan
 
-Working name: **media-hub**. Despite the name, the initial product is a personal news/signal hub that collects RSS/document sources, Bluesky social signal, and Polymarket probability signal into a local queryable store for Pi and CLI workflows.
+Working name: **media-hub**. The initial product is a personal news/signal hub that collects RSS/document sources, Bluesky social signal, and Polymarket probability signal into a local queryable store for Pi and CLI workflows.
 
 ## Goals
 
 - Build a local-first intelligence feed for topics I care about.
 - Keep source adapters isolated enough that dependencies do not fight each other.
 - Prefer short-lived batch workers over always-on services at first.
-- Make outputs portable and inspectable via JSONL.
-- Store normalized data in SQLite initially.
+- Make worker output portable and inspectable via JSONL on stdout.
+- Stream worker output into SQLite as the canonical durable store.
 - Expose useful CLI queries first; Pi extension/tools can come later.
 
 ## Non-goals for MVP
@@ -22,20 +22,35 @@ Working name: **media-hub**. Despite the name, the initial product is a personal
 ## Mental model
 
 ```text
-source workers -> JSONL artifacts -> hub ingest -> SQLite -> CLI/Pi queries
+source workers -> JSONL on stdout -> hub ingest -> SQLite -> CLI/Pi queries
 ```
 
-Source workers are short-lived commands:
+Source workers are short-lived container commands. They emit newline-delimited JSON to stdout and logs/errors to stderr. The control layer streams worker stdout directly into the hub ingest command; saving JSONL files is optional debug/replay behavior, not the normal durable store.
+
+Normal mode:
 
 ```bash
-media-hub-rss fetch --config config/feeds.yaml --out data/inbox/rss.jsonl
-media-hub-bluesky fetch --config config/bluesky.yaml --out data/inbox/bluesky.jsonl
-media-hub-polymarket fetch --config config/polymarket.yaml --out data/inbox/polymarket.jsonl
-media-hub ingest data/inbox/*.jsonl
-media-hub digest --since 24h --topic cybersecurity
+podman run --rm media-hub-rss fetch \
+  | media-hub ingest --source rss -
+
+podman run --rm media-hub-bluesky fetch \
+  | media-hub ingest --source bluesky -
+
+podman run --rm media-hub-polymarket fetch \
+  | media-hub ingest --source polymarket -
 ```
 
-Containers may be used for workers with annoying dependencies, but the first orchestration layer should be `just`/shell commands, not compose.
+Debug/replay mode may tee worker output into a run directory:
+
+```bash
+podman run --rm media-hub-rss fetch \
+  | tee data/runs/$RUN_ID/rss.jsonl \
+  | media-hub ingest --source rss -
+```
+
+SQLite is the canonical durable store. JSONL is the worker interchange format and may be retained temporarily for debugging.
+
+The first orchestration layer should be plain shell scripts, not compose.
 
 ## Source categories
 
@@ -86,16 +101,46 @@ Use a normalized event/item envelope in JSONL so every worker can emit records i
 
 ### Common envelope
 
+Every worker emits newline-delimited JSON records. The ingest layer only depends on this minimal envelope.
+
+Required fields:
+
 ```json
 {
   "schema_version": 1,
-  "record_type": "feed_item | document | social_post | probability_signal",
-  "source": "hacker-news-rss",
-  "source_type": "rss | bluesky | polymarket",
-  "fetched_at": "2026-05-29T00:00:00Z",
-  "raw": {}
+  "source": "hacker-news",
+  "source_type": "rss",
+  "record_type": "feed_item",
+  "observed_at": "2026-05-29T00:00:00Z"
 }
 ```
+
+Optional-but-standard fields:
+
+```json
+{
+  "title": "Example title",
+  "url": "https://example.com/article",
+  "canonical_url": "https://example.com/article",
+  "published_at": "2026-05-28T23:00:00Z",
+  "external_id": "source-specific-id"
+}
+```
+
+Source-specific fields can live alongside the envelope fields. For example: `feed_url`, `summary`, `comments_url`, `author_handle`, `probability`, `volume`, etc.
+
+The ingest script maps only these fields into SQLite columns:
+
+```text
+source        <- .source
+record_type   <- .record_type
+canonical_url <- .canonical_url // null
+observed_at   <- .observed_at
+title         <- .title // null
+raw_json      <- full object
+```
+
+Workers own source-specific parsing and normalization; ingest is deliberately dumb.
 
 ### Feed item
 
@@ -166,20 +211,41 @@ Use a normalized event/item envelope in JSONL so every worker can emit records i
 
 ## SQLite schema sketch
 
-Start simple:
+Start with one flexible table:
+
+```sql
+CREATE TABLE records (
+  id INTEGER PRIMARY KEY,
+  source TEXT NOT NULL,
+  record_type TEXT NOT NULL,
+  canonical_url TEXT,
+  observed_at TEXT,
+  title TEXT,
+  raw_json TEXT NOT NULL,
+  inserted_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_records_source ON records(source);
+CREATE INDEX idx_records_type ON records(record_type);
+CREATE INDEX idx_records_url ON records(canonical_url);
+CREATE INDEX idx_records_observed_at ON records(observed_at);
+```
+
+Rationale:
+
+- flexible while worker formats evolve
+- easy to ingest with shell + `jq` + `sqlite3`
+- still exposes common query fields
+- preserves full source record as JSON
+
+Later, if needed, add specialized tables or views:
 
 ```text
-sources
 feed_items
 documents
 social_posts
 probability_signals
 url_mentions
-```
-
-Later:
-
-```text
 stories
 story_items
 summaries
@@ -187,7 +253,7 @@ topics
 embeddings
 ```
 
-Important early design: canonicalize URLs so RSS, Bluesky, and HN mentions can join on the same document/story.
+Important early design: workers should emit `canonical_url` when a record is URL-related so RSS, Bluesky, and HN mentions can join on the same document/story. The ingest script should not implement source-specific canonicalization logic.
 
 ## Repo shape proposal
 
@@ -206,10 +272,11 @@ media-hub/
     document.schema.json
     social-post.schema.json
     probability-signal.schema.json
-  hub/
+  db/
     schema.sql
-    ingest.py
-    cli.py
+  scripts/
+    tick.sh
+    ingest.sh
   workers/
     rss/
       README.md
@@ -221,23 +288,26 @@ media-hub/
       README.md
   data/
     .gitkeep
+    # local SQLite/runs ignored by git
 ```
 
-Language choice is still open. A pragmatic default:
+Language choice is intentionally open and per-component.
 
-- Python for hub + RSS/article extraction because `trafilatura` is good.
-- Node/TypeScript for Bluesky if the AT Protocol SDK is useful.
-- Python or TypeScript for Polymarket depending on API/library comfort.
+- The control plane should start as plain shell scripts.
+- Ingest/query starts as shell + `jq` + `sqlite3`.
+- Workers can use whichever language/library fits the source best.
+- Add Python/TypeScript only when a specific component needs it.
 
-Use JSONL as the boundary so language choices can differ.
+Use JSONL on stdout as the worker boundary so implementation choices can differ. Workers are responsible for source-specific parsing, normalization, and canonicalization. The control/ingest layer should stay mostly data-agnostic: read JSONL records, extract a few common envelope fields, and insert the full record into SQLite. Retained JSONL files are optional debug/replay artifacts.
 
 ## MVP sequence
 
 ### Phase 0: Repo skeleton
 
-- Add README, plan, gitignore, justfile.
+- Add README, plan, gitignore, shell scripts.
 - Define JSONL schemas at a lightweight/documentation level.
-- Add SQLite schema.
+- Add SQLite schema with one flexible `records` table.
+- Add shell/`jq`/`sqlite3` ingest prototype.
 
 ### Phase 1: RSS worker + ingest
 
@@ -245,12 +315,12 @@ Use JSONL as the boundary so language choices can differ.
   - Hacker News official RSS
   - Slashdot
   - maybe 2–3 blogs/news feeds
-- Fetch feed items to JSONL.
-- Ingest feed items into SQLite.
-- Add basic CLI:
-  - `media-hub ingest ...`
-  - `media-hub items --since 24h`
-  - `media-hub search QUERY`
+- Fetch feed items as JSONL on stdout.
+- Stream feed items into SQLite.
+- Add basic shell commands/scripts:
+  - `scripts/ingest.sh --source rss -`
+  - `scripts/items.sh --since 24h`
+  - `scripts/search.sh QUERY`
 
 ### Phase 2: Article extraction
 
@@ -283,34 +353,29 @@ Use JSONL as the boundary so language choices can differ.
 
 ## Open questions
 
-1. Should the hub CLI be Python, TypeScript, or something else?
-2. Should the initial worker output schema be strict JSON Schema or just documented JSONL examples?
-3. Where should local data live by default?
+1. Should the initial worker output schema be strict JSON Schema or just documented JSONL examples?
+2. Where should local data live by default?
    - repo-local `data/`
    - `~/.local/share/media-hub/`
-4. How aggressive should article fetching be?
+3. How aggressive should article fetching be?
    - all feed links
    - only selected feeds
    - only links above a score/comment threshold
-5. How should topics be represented initially?
+4. How should topics be represented initially?
    - manual config tags per source
    - keyword rules
    - later LLM classification
-6. Should containers be implemented immediately, or after the first local worker works?
+
+## Decisions so far
+
+- Control plane v0: plain shell script orchestration.
+- No dedicated hub service. The system is a control script plus worker containers plus SQLite.
+- Ingest/query implementation is undecided; start with shell + `jq` + `sqlite3` if sufficient, and only add Python if complexity warrants it.
+- Workers: containerized short-lived fetchers.
+- Worker contract: JSONL to stdout, logs/errors to stderr.
+- Persistence: stream worker output into SQLite; SQLite is canonical durable storage.
+- Optional debug mode: tee worker JSONL into `data/runs/<run-id>/` for replay/inspection.
 
 ## Near-term decision to make
 
-Before implementation, decide the initial stack:
-
-```text
-Option A: Python-first
-  hub + rss worker in Python; add TS only when Bluesky arrives.
-
-Option B: TypeScript-first
-  hub + workers in TS; use Readability/jsdom for article extraction.
-
-Option C: Polyglot from day one
-  hub in Python, Bluesky in TS, Polymarket TBD, all joined by JSONL.
-```
-
-My current lean: **Option A** for fastest useful MVP, with JSONL boundaries preserving future polyglot/container flexibility.
+Next decision: decide the first worker to implement, likely RSS.
