@@ -10,6 +10,7 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import feedparser
 import httpx
+import trafilatura
 import yaml
 
 TRACKING_PARAMS = {
@@ -73,11 +74,54 @@ def emit(record: dict[str, Any]) -> None:
     print(json.dumps(record, ensure_ascii=False, separators=(",", ":")), flush=True)
 
 
+def fetch_document(
+    client: httpx.Client,
+    *,
+    url: str,
+    canonical_url: str | None,
+    source: str,
+    tags: list[str],
+    observed_at: str,
+    published_at: str | None,
+    fallback_title: str | None,
+) -> None:
+    """Fetch a linked article and emit an extracted document record."""
+    response = client.get(url)
+    response.raise_for_status()
+    html = response.text
+    text = trafilatura.extract(html, url=url, favor_recall=True)
+    if not text:
+        print(f"no readable text extracted from {url}", file=sys.stderr)
+        return
+
+    meta = trafilatura.extract_metadata(html, default_url=url)
+    title = (getattr(meta, "title", None) if meta else None) or fallback_title
+    record = {
+        "schema_version": 1,
+        "source": source,
+        "source_type": "rss",
+        "record_type": "document",
+        "observed_at": observed_at,
+        "title": title,
+        "url": url,
+        "canonical_url": canonical_url,
+        "published_at": (getattr(meta, "date", None) if meta else None) or published_at,
+        "external_id": canonical_url or url,
+        "author": getattr(meta, "author", None) if meta else None,
+        "site_name": getattr(meta, "sitename", None) if meta else None,
+        "text": text,
+        "word_count": len(text.split()),
+        "tags": tags,
+    }
+    emit({k: v for k, v in record.items() if v is not None})
+
+
 def fetch_feed(client: httpx.Client, feed: dict[str, Any]) -> None:
     feed_url = feed["url"]
     feed_name = feed.get("name") or feed_url
     source = feed.get("source") or feed_name.lower().replace(" ", "-")
     tags = feed.get("tags") or []
+    fetch_articles = bool(feed.get("fetch_articles"))
 
     print(f"fetching feed {feed_name} ({feed_url})", file=sys.stderr)
     response = client.get(feed_url)
@@ -88,6 +132,7 @@ def fetch_feed(client: httpx.Client, feed: dict[str, Any]) -> None:
     for entry in parsed.entries:
         url = entry.get("link")
         title = entry.get("title")
+        canonical_url = canonicalize_url(url)
         published_at = iso_from_feed_time(entry.get("published") or entry.get("updated"))
         record = {
             "schema_version": 1,
@@ -97,7 +142,7 @@ def fetch_feed(client: httpx.Client, feed: dict[str, Any]) -> None:
             "observed_at": observed_at,
             "title": title,
             "url": url,
-            "canonical_url": canonicalize_url(url),
+            "canonical_url": canonical_url,
             "published_at": published_at,
             "external_id": entry.get("id") or entry.get("guid") or url,
             "feed_name": feed_name,
@@ -107,6 +152,21 @@ def fetch_feed(client: httpx.Client, feed: dict[str, Any]) -> None:
             "tags": tags,
         }
         emit({k: v for k, v in record.items() if v is not None})
+
+        if fetch_articles and url:
+            try:
+                fetch_document(
+                    client,
+                    url=url,
+                    canonical_url=canonical_url,
+                    source=source,
+                    tags=tags,
+                    observed_at=observed_at,
+                    published_at=published_at,
+                    fallback_title=title,
+                )
+            except Exception as exc:
+                print(f"error extracting article {url}: {exc}", file=sys.stderr)
 
 
 def cmd_fetch(args: argparse.Namespace) -> int:

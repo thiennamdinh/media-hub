@@ -100,10 +100,14 @@ EOF
 }
 
 make_wrapper media-hub-build build.sh
+make_wrapper media-hub-check check.sh
 make_wrapper media-hub-debug-tick debug-tick.sh
+make_wrapper media-hub-digest digest.sh
 make_wrapper media-hub-ingest ingest.sh
 make_wrapper media-hub-init-db init-db.sh
 make_wrapper media-hub-items items.sh
+make_wrapper media-hub-links links.sh
+make_wrapper media-hub-markets markets.sh
 make_wrapper media-hub-search search.sh
 make_wrapper media-hub-tick tick.sh
 

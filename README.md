@@ -91,6 +91,15 @@ Inspect data:
 ```bash
 ./scripts/items.sh --limit 20
 ./scripts/search.sh "cybersecurity"
+./scripts/digest.sh --since 24h
+./scripts/links.sh --mentioned-by bluesky,hacker-news
+./scripts/markets.sh --moved --since 7d
+```
+
+Run local checks:
+
+```bash
+./scripts/check.sh
 ```
 
 ## Local install
@@ -106,8 +115,12 @@ Installed commands:
 ```bash
 media-hub-tick
 media-hub-debug-tick
+media-hub-check
 media-hub-items --limit 20
 media-hub-search "cybersecurity"
+media-hub-digest --since 24h
+media-hub-links --min-sources 2
+media-hub-markets --moved --since 7d
 ```
 
 The installed runtime is independent of the development checkout, so cron/systemd can point at:
@@ -149,6 +162,15 @@ Host tools:
 - `podman` or `docker`
 
 Set `CONTAINER_RUNTIME=docker` to use Docker instead of Podman. The scripts use Podman-compatible `:z` volume labels for Fedora/SELinux.
+
+## Data model notes
+
+Repeated ticks deduplicate non-snapshot records by `external_id` when present, falling back to `canonical_url`. Polymarket `probability_signal` records remain append-only snapshots so movement over time can be queried.
+
+The schema also exposes lightweight query views:
+
+- `url_mentions` — URL-bearing records with source/type metadata.
+- `stories` — grouped canonical URLs with mention/source counts.
 
 ## Data and config
 

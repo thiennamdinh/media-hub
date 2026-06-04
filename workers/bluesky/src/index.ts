@@ -152,6 +152,24 @@ async function fetchActors(agent: AtpAgent, config: any, observedAt: string) {
   }
 }
 
+async function fetchLists(agent: AtpAgent, config: any, observedAt: string) {
+  for (const list of config.lists ?? []) {
+    if (!list?.uri) continue;
+    const limit = Number(list.limit ?? 25);
+    const source = list.name ? `bluesky-list:${list.name}` : `bluesky-list:${list.uri}`;
+    const tags = Array.isArray(list.tags) ? list.tags : [];
+    console.error(`fetching Bluesky list: ${list.name ?? list.uri}`);
+    try {
+      const res = await agent.app.bsky.feed.getListFeed({ list: list.uri, limit });
+      for (const item of res.data.feed ?? []) {
+        emit(compact(normalizePost(item.post, source, tags, observedAt)));
+      }
+    } catch (err: any) {
+      console.error(`error fetching Bluesky list ${list.name ?? list.uri}: ${err?.message ?? String(err)}`);
+    }
+  }
+}
+
 async function fetchFeeds(agent: AtpAgent, config: any, observedAt: string) {
   for (const feed of config.feeds ?? []) {
     if (!feed?.uri) continue;
@@ -187,6 +205,7 @@ async function main() {
   await maybeLogin(agent);
   await fetchSearches(agent, config, observedAt);
   await fetchActors(agent, config, observedAt);
+  await fetchLists(agent, config, observedAt);
   await fetchFeeds(agent, config, observedAt);
 }
 

@@ -384,6 +384,14 @@ Use JSONL on stdout as the worker boundary so implementation choices can differ.
 - Persistence: stream worker output into SQLite; SQLite is canonical durable storage.
 - Optional debug mode: tee worker JSONL into `data/runs/<run-id>/` for replay/inspection.
 
-## Near-term decision to make
+## Current implementation status
 
-Next decision: run/build/test the scaffold and then iterate on the RSS worker first.
+The initial scaffold is implemented. RSS, Bluesky, and Polymarket workers emit JSONL into SQLite through shell control scripts. The query layer now includes basic item/search commands plus digest, cross-source link grouping, and market movement helpers.
+
+Current storage remains one flexible `records` table, with lightweight `url_mentions` and `stories` views for query-time grouping. Ingest skips duplicate non-snapshot records by `external_id` or `canonical_url`; Polymarket `probability_signal` records remain append-only snapshots.
+
+Near-term next steps:
+
+1. Curate real source configs and explicit Polymarket watchlists.
+2. Decide whether the query-time `stories` view is sufficient or whether to promote stories/mentions into durable tables.
+3. Add richer ranking/summarization once the source mix is stable.

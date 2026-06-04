@@ -14,6 +14,12 @@ feeds:
   #   tags: [example]
   #   limit: 25
 
+lists:
+  # - name: Example List
+  #   uri: at://did:plc:example/app.bsky.graph.list/example
+  #   tags: [example]
+  #   limit: 25
+
 searches:
   # Public search may require auth depending on the AppView.
   # - query: cybersecurity

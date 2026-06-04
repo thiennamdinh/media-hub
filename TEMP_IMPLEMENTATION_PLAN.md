@@ -42,6 +42,14 @@ This is a working checklist for the initial one-shot scaffold. It is intentional
 - [x] End-to-end `scripts/tick.sh` with example configs.
 - [x] End-to-end `scripts/debug-tick.sh` with retained debug artifacts.
 
+## Gap-fill follow-up
+
+- [x] Add repeated-tick dedupe for non-snapshot records while keeping probability snapshots append-only.
+- [x] Add lightweight `url_mentions` and `stories` SQLite views for query-time link/story grouping.
+- [x] Add digest/link/market query helpers.
+- [x] Install wrappers for digest/link/market helpers.
+- [x] Add `scripts/check.sh` smoke checks for shell/Python/TypeScript/schema/ingest/query behavior.
+
 ## Notes
 
 - `sqlite3` was installed after initial scaffold and ingest/query scripts now run.
