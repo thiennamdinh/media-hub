@@ -43,9 +43,16 @@ def first_float(*values: Any) -> float | None:
 
 def market_url(market: dict[str, Any]) -> str | None:
     slug = market.get("slug")
-    if slug:
-        return f"https://polymarket.com/event/{slug}"
-    return market.get("url")
+    if not slug:
+        return market.get("url")
+
+    events = market.get("events")
+    if isinstance(events, list) and events:
+        event = events[0]
+        if isinstance(event, dict) and event.get("slug"):
+            return f"https://polymarket.com/event/{event['slug']}/{slug}"
+
+    return f"https://polymarket.com/event/{slug}"
 
 
 def normalize_market(market: dict[str, Any], *, tags: list[str] | None = None, observed_at: str) -> dict[str, Any]:
