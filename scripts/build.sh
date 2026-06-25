@@ -12,4 +12,5 @@ fi
 
 "$RUNTIME" build -t "$IMAGE_PREFIX-rss" "$ROOT_DIR/workers/rss"
 "$RUNTIME" build -t "$IMAGE_PREFIX-bluesky" "$ROOT_DIR/workers/bluesky"
+"$RUNTIME" build -t "$IMAGE_PREFIX-mastodon" "$ROOT_DIR/workers/mastodon"
 "$RUNTIME" build -t "$IMAGE_PREFIX-polymarket" "$ROOT_DIR/workers/polymarket"

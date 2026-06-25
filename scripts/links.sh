@@ -2,8 +2,8 @@
 set -euo pipefail
 
 # Cross-source URL view: group records by canonical_url and show which sources
-# mentioned each link. The canonical_url join is what lets RSS, Bluesky, and
-# Polymarket records converge on the same underlying story.
+# mentioned each link. The canonical_url join is what lets RSS, Bluesky,
+# Mastodon, and Polymarket records converge on the same underlying story.
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DATA_DIR="${MEDIA_HUB_DATA_DIR:-$HOME/.local/share/media-hub}"

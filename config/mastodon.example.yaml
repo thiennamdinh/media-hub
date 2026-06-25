@@ -1,0 +1,56 @@
+# Mastodon/ActivityPub social signal sources.
+#
+# The worker is read-only and uses public APIs by default. If a server needs an
+# access token, set token_env on the instance and export that environment
+# variable where the worker runs. Use read-only scopes only.
+
+instances:
+  - name: mastodon-social
+    base_url: https://mastodon.social
+    # token_env: MASTODON_TOKEN_MASTODON_SOCIAL
+
+  - name: infosec-exchange
+    base_url: https://infosec.exchange
+    # This instance may require auth for tag/public timeline APIs.
+    # token_env: MASTODON_TOKEN_INFOSEC_EXCHANGE
+
+  - name: hachyderm
+    base_url: https://hachyderm.io
+
+accounts:
+  # Fetch a specific account from its home instance by default.
+  # - acct: example@mastodon.social
+  #   tags: [example, mastodon]
+  #   limit: 20
+  #   exclude_replies: true
+  #   exclude_reblogs: false
+
+  # Or resolve a remote account through a chosen instance/app view.
+  # - acct: example@hachyderm.io
+  #   instance: mastodon-social
+  #   tags: [example, tech]
+  #   limit: 20
+
+tags:
+  # Hashtag timelines are instance-mediated; the same tag on different servers
+  # can produce different results depending on federation and moderation.
+  # - tag: infosec
+  #   instance: hachyderm
+  #   tags: [security, mastodon]
+  #   limit: 25
+  #   local: false
+
+  # - tag: llm
+  #   instance: hachyderm
+  #   tags: [ai, mastodon]
+  #   limit: 25
+
+timelines:
+  # Local/federated public timelines are high-noise. Keep disabled until a
+  # specific instance proves useful as a curated signal source.
+  # - instance: infosec-exchange
+  #   source: mastodon-timeline:infosec-exchange:local
+  #   tags: [security, mastodon]
+  #   limit: 20
+  #   local: true
+  #   enabled: false

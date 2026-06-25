@@ -82,6 +82,7 @@ install_config() {
 
 install_config rss
 install_config bluesky
+install_config mastodon
 install_config polymarket
 
 make_wrapper() {
@@ -159,7 +160,7 @@ Installed media-hub runtime.
 Binaries: $BIN_DIR/media-hub-*
 Config:   $CONFIG_DIR/*.yaml
 Data:     $DATA_DIR/media-hub.sqlite
-Images:   $IMAGE_PREFIX-{rss,bluesky,polymarket}
+Images:   $IMAGE_PREFIX-{rss,bluesky,mastodon,polymarket}
 EOF
 
 if [[ "$INSTALL_SYSTEMD" -eq 1 ]]; then

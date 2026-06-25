@@ -21,6 +21,8 @@ jobs:
             context: workers/rss
           - image: bluesky
             context: workers/bluesky
+          - image: mastodon
+            context: workers/mastodon
           - image: polymarket
             context: workers/polymarket
 

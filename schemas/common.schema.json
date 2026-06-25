@@ -7,7 +7,7 @@
   "properties": {
     "schema_version": { "type": "integer", "const": 1 },
     "source": { "type": "string", "minLength": 1 },
-    "source_type": { "type": "string", "enum": ["rss", "bluesky", "polymarket"] },
+    "source_type": { "type": "string", "enum": ["rss", "bluesky", "mastodon", "polymarket"] },
     "record_type": { "type": "string", "minLength": 1 },
     "observed_at": { "type": "string", "format": "date-time" },
     "title": { "type": ["string", "null"] },

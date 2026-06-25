@@ -1,6 +1,6 @@
 # media-hub
 
-Local-first news/signal hub for RSS/document sources, Bluesky social signal, and Polymarket probability signal.
+Local-first news/signal hub for RSS/document sources, Bluesky and Mastodon social signal, and Polymarket probability signal.
 
 The v0 architecture is intentionally simple:
 
@@ -18,6 +18,7 @@ There is no daemon or central service. Workers know source-specific details; ing
 
 - `workers/rss` — Python RSS worker using `feedparser`, `httpx`, and `PyYAML`.
 - `workers/bluesky` — TypeScript Bluesky worker using `@atproto/api`.
+- `workers/mastodon` — Python Mastodon/ActivityPub worker using public HTTP APIs.
 - `workers/polymarket` — Python Polymarket worker using public HTTP APIs.
 - `scripts/*.sh` — build, tick, ingest, and query helpers.
 - `db/schema.sql` — SQLite schema.
@@ -59,6 +60,7 @@ Create repo-local configs from examples:
 mkdir -p config
 cp config/rss.example.yaml config/rss.local.yaml
 cp config/bluesky.example.yaml config/bluesky.local.yaml
+cp config/mastodon.example.yaml config/mastodon.local.yaml
 cp config/polymarket.example.yaml config/polymarket.local.yaml
 ```
 
@@ -172,6 +174,12 @@ The schema also exposes lightweight query views:
 - `url_mentions` — URL-bearing records with source/type metadata.
 - `stories` — grouped canonical URLs with mention/source counts.
 
+## Mastodon / ActivityPub notes
+
+The Mastodon worker is a first-class social worker, not an RSS adapter. It emits `social_post` records with `source_type: mastodon`, preserves status/account metadata, extracts outbound links for cross-source joins, and deduplicates by ActivityPub status URI when available.
+
+Configure it in `mastodon.yaml` with curated `accounts`, `tags`, and optional `timelines`. Hashtag and public timelines are instance-mediated: `#infosec` on `hachyderm.io` and `#infosec` on `mastodon.social` may return different results depending on federation, moderation, and login requirements. Optional read-only access tokens can be passed via `token_env` on an instance; runtime scripts pass `MASTODON_*` environment variables into the worker container.
+
 ## Data and config
 
 Development fallbacks:
@@ -199,6 +207,7 @@ GitHub Actions publishes worker images to GitHub Container Registry on pushes to
 ```text
 ghcr.io/thiennamdinh/media-hub-rss:latest
 ghcr.io/thiennamdinh/media-hub-bluesky:latest
+ghcr.io/thiennamdinh/media-hub-mastodon:latest
 ghcr.io/thiennamdinh/media-hub-polymarket:latest
 ```
 
@@ -207,6 +216,7 @@ For local development, `scripts/install.sh` builds local images named:
 ```text
 media-hub-rss
 media-hub-bluesky
+media-hub-mastodon
 media-hub-polymarket
 ```
 
@@ -221,5 +231,6 @@ Then `media-hub-tick` will use:
 ```text
 ghcr.io/thiennamdinh/media-hub-rss
 ghcr.io/thiennamdinh/media-hub-bluesky
+ghcr.io/thiennamdinh/media-hub-mastodon
 ghcr.io/thiennamdinh/media-hub-polymarket
 ```

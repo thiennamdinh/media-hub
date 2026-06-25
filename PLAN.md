@@ -1,6 +1,6 @@
 # Media Hub Plan
 
-Working name: **media-hub**. The initial product is a personal news/signal hub that collects RSS/document sources, Bluesky social signal, and Polymarket probability signal into a local queryable store for Pi and CLI workflows.
+Working name: **media-hub**. The initial product is a personal news/signal hub that collects RSS/document sources, Bluesky/Mastodon social signal, and Polymarket probability signal into a local queryable store for Pi and CLI workflows.
 
 ## Goals
 
@@ -253,7 +253,7 @@ topics
 embeddings
 ```
 
-Important early design: workers should emit `canonical_url` when a record is URL-related so RSS, Bluesky, and HN mentions can join on the same document/story. The ingest script should not implement source-specific canonicalization logic.
+Important early design: workers should emit `canonical_url` when a record is URL-related so RSS, Bluesky, Mastodon, and HN mentions can join on the same document/story. The ingest script should not implement source-specific canonicalization logic.
 
 ## Repo shape proposal
 
@@ -379,6 +379,7 @@ Use JSONL on stdout as the worker boundary so implementation choices can differ.
 - GitHub Actions publishes worker images to GHCR on pushes to `main`; local install can also build images directly.
 - RSS worker: Python + `feedparser` + `httpx` + `PyYAML`.
 - Bluesky worker: TypeScript/Node + `@atproto/api`.
+- Mastodon worker: Python + `httpx` + `PyYAML` using public Mastodon-compatible APIs.
 - Polymarket worker: Python + `httpx` + `PyYAML`.
 - Worker contract: JSONL to stdout, logs/errors to stderr.
 - Persistence: stream worker output into SQLite; SQLite is canonical durable storage.
@@ -386,7 +387,7 @@ Use JSONL on stdout as the worker boundary so implementation choices can differ.
 
 ## Current implementation status
 
-The initial scaffold is implemented. RSS, Bluesky, and Polymarket workers emit JSONL into SQLite through shell control scripts. The query layer now includes basic item/search commands plus digest, cross-source link grouping, and market movement helpers.
+The initial scaffold is implemented. RSS, Bluesky, Mastodon, and Polymarket workers emit JSONL into SQLite through shell control scripts. The query layer now includes basic item/search commands plus digest, cross-source link grouping, and market movement helpers.
 
 Current storage remains one flexible `records` table, with lightweight `url_mentions` and `stories` views for query-time grouping. Ingest skips duplicate non-snapshot records by `external_id` or `canonical_url`; Polymarket `probability_signal` records remain append-only snapshots.
 

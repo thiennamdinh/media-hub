@@ -21,8 +21,28 @@ run_worker() {
   local source_type="$1"
   local image="$2"
   local config="$3"
+  local env_args=()
+
+  case "$source_type" in
+    bluesky)
+      for name in BLUESKY_SERVICE BLUESKY_IDENTIFIER BLUESKY_APP_PASSWORD; do
+        if [[ -n "${!name:-}" ]]; then
+          env_args+=(--env "$name")
+        fi
+      done
+      ;;
+    mastodon)
+      while IFS='=' read -r name _; do
+        if [[ "$name" == MASTODON_* ]]; then
+          env_args+=(--env "$name")
+        fi
+      done < <(env)
+      ;;
+  esac
+
   echo "[$(date -u +%FT%TZ)] fetching $source_type" >&2
   "$RUNTIME" run --rm --log-driver=none \
+    "${env_args[@]}" \
     -v "$config:/config/config.yaml:ro,z" \
     "$image" fetch --config /config/config.yaml \
     | "$ROOT_DIR/scripts/ingest.sh" --source "$source_type" -
@@ -30,4 +50,5 @@ run_worker() {
 
 run_worker rss "$IMAGE_PREFIX-rss" "$(config_for rss)"
 run_worker bluesky "$IMAGE_PREFIX-bluesky" "$(config_for bluesky)"
+run_worker mastodon "$IMAGE_PREFIX-mastodon" "$(config_for mastodon)"
 run_worker polymarket "$IMAGE_PREFIX-polymarket" "$(config_for polymarket)"
