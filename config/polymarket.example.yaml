@@ -1,13 +1,33 @@
 # Polymarket does not expose a simple "market cap" field in the public Gamma market records.
 # Useful size proxies include volumeNum, volume24hr, liquidityNum, and openInterest when present.
 
+# Event-level discovery is usually better than raw market-level discovery for
+# multi-outcome events. It emits the leading outcomes from each active event
+# instead of long-shot markets with inflated liquidity/volume.
+top_events:
+  - name: Top active events by 24h volume
+    metric: volume24hr
+    limit: 10
+    leaders: 3
+    active: true
+    closed: false
+    tags: [example, top, active]
+
+# Use explicit events to track leaders for known multi-outcome markets.
+events:
+  # - slug: presidential-election-winner-2028
+  #   leaders: 5
+  #   tags: [example, politics]
+
+# Market-level discovery can still be useful for binary markets, but broad
+# total-volume sorting tends to surface long tails from huge events.
 top_markets:
-  - name: Top active markets by total volume
-    metric: volumeNum
+  - name: Top active markets by 24h volume
+    metric: volume24hr
     limit: 10
     active: true
     closed: false
-    tags: [example, top, volume]
+    tags: [example, top, active]
 
 markets:
   # Use explicit markets for reliable tracking.
